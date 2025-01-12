@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RPN 数式生成</title>
+    <script>
+      function evaluateRPN(expression) {
+        const stack = [];
+        const operators = ["+", "-", "*", "/"];
+        const tokens = expression.split(" ");
+
+        for (const token of tokens) {
+          if (!operators.includes(token)) {
+            stack.push(parseFloat(token));
+          } else {
+            const b = stack.pop();
+            const a = stack.pop();
+            switch (token) {
+              case "+":
+                stack.push(a + b);
+                break;
+              case "-":
+                stack.push(a - b);
+                break;
+              case "*":
+                stack.push(a * b);
+                break;
+              case "/":
+                stack.push(a / b);
+                break;
+              default:
+                throw new Error(`Unknown operator: ${token}`);
+            }
+          }
+        }
+
+        if (stack.length !== 1) {
+          throw new Error("Invalid RPN expression");
+        }
+        return stack[0];
+      }
+
+      function findRPNExpression(numbers, answer) {
+        const operators = ["+", "-", "*", "/"];
+        const target = parseFloat(answer);
+        const numArray = numbers.match(/\d+/g).map(Number);
+
+        function permute(arr, results = [], current = []) {
+          if (arr.length === 0) {
+            results.push([...current]);
+            return results;
+          }
+          for (let i = 0; i < arr.length; i++) {
+            const newArr = [...arr];
+            const next = newArr.splice(i, 1);
+            permute(newArr, results, [...current, ...next]);
+          }
+          return results;
+        }
+
+        function generateRPNExpressions(numbers) {
+          const results = [];
+          const operatorCount = numbers.length - 1;
+          function backtrack(path, operatorCount) {
+            if (operatorCount === 0) {
+              results.push(path);
+              return;
+            }
+            for (const operator of operators) {
+              backtrack([...path, operator], operatorCount - 1);
+            }
+          }
+          backtrack([], operatorCount);
+          return results.map((opSeq) => numbers.concat(opSeq));
+        }
+
+        const numberPermutations = permute(numArray);
+
+        for (const numPerm of numberPermutations) {
+          const rpnExpressions = generateRPNExpressions(numPerm);
+          for (const expression of rpnExpressions) {
+            const rpnString = expression.join(" ");
+            try {
+              if (evaluateRPN(rpnString) === target) {
+                return rpnString;
+              }
+            } catch {
+              continue;
+            }
+          }
+        }
+
+        return null;
+      }
+
+      function rpnToInfix(rpnExpression) {
+        const stack = [];
+        const operators = ["+", "-", "*", "/"];
+        const tokens = rpnExpression.split(" ");
+
+        for (const token of tokens) {
+          if (!operators.includes(token)) {
+            stack.push(token);
+          } else {
+            const b = stack.pop();
+            const a = stack.pop();
+            const expression = `(${a} ${token} ${b})`;
+            stack.push(expression);
+          }
+        }
+
+        if (stack.length !== 1) {
+          throw new Error("Invalid RPN expression");
+        }
+        return stack[0];
+      }
+
+      function execute() {
+        const numbers = document.getElementById("numbers").value;
+        const answer = document.getElementById("answer").value;
+        const resultElement = document.getElementById("result");
+
+        try {
+          const rpnExpression = findRPNExpression(numbers, answer);
+          if (rpnExpression) {
+            const infixExpression = rpnToInfix(rpnExpression);
+            resultElement.textContent = `${infixExpression} = ${answer}`;
+          } else {
+            resultElement.textContent =
+              "条件を満たす数式が見つかりませんでした。";
+          }
+        } catch (error) {
+          resultElement.textContent = "エラーが発生しました: " + error.message;
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <h1>逆ポーランド記法 数式生成ツール</h1>
+    <form onsubmit="event.preventDefault(); execute();">
+      <label for="numbers">要素入力 (例: 「12 34 5」):</label><br />
+      <input type="text" id="numbers" required /><br /><br />
+      <label for="answer">解入力 (例: 「17」):</label><br />
+      <input type="text" id="answer" required /><br /><br />
+      <button type="submit">実行!</button>
+    </form>
+    <p id="result">数式がここに表示されます...</p>
+  </body>
+</html>
